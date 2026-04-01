@@ -21,21 +21,30 @@ public class IntegrationServiceImpl implements IntegrationService {
     private final String DEFAULT_SLSCODE = "UP23";
     private final String DEFAULT_CSSCODE = "9180";
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(IntegrationServiceImpl.class);
+
     public IntegrationServiceImpl(StateRepository stateRepository) {
         this.stateRepository = stateRepository;
     }
 
     @Override
     public StateResponse getState(StateRequest req) {
+        log.debug("Fetching states from database...");
         StateResponse resp = new StateResponse();
-        StateResponse.StateResult st = new StateResponse.StateResult();
-        st.setState_Code("UP");
-        st.setState_Name("Uttar Pradesh");
-        st.setShort_Name("UP");
-        st.setLGD_State_Code("09");
-        st.setSt_local_name("उत्तर प्रदेश");
-        resp.setStatus(true);
-        resp.setResult(List.of(st));
+        List<StateEntity> entities = stateRepository.findAll();
+        
+        List<StateResponse.StateResult> results = entities.stream().map(e -> {
+            StateResponse.StateResult st = new StateResponse.StateResult();
+            st.setState_Code(e.getStateCode());
+            st.setState_Name(e.getStateName());
+            st.setShort_Name(e.getShortName());
+            st.setLGD_State_Code(e.getLgdStateCode());
+            st.setSt_local_name(e.getStLocalName());
+            return st;
+        }).toList();
+
+        resp.setStatus(!results.isEmpty());
+        resp.setResult(results);
         return resp;
     }
 
@@ -86,11 +95,18 @@ public class IntegrationServiceImpl implements IntegrationService {
         return r;
     }
 
-    @Override public ErrorMasterResponse getErrorMaster(ErrorMasterRequest req) {
+    @Override
+    public ErrorMasterResponse getErrorMaster(ErrorMasterRequest req) {
         ErrorMasterResponse r = new ErrorMasterResponse();
         r.setStatus(true);
         r.setResult(List.of(new ErrorMasterResponse.ErrorMaster("EXP0000","Success")));
         return r;
+    }
+
+    @Override
+    public StateResponse getAllStates() {
+        // Reuse getState logic but explicitly for full portal loads
+        return getState(new StateRequest());
     }
 
     @Override
@@ -101,7 +117,6 @@ public class IntegrationServiceImpl implements IntegrationService {
             StringReader sr = new StringReader(xml);
             com.aparsh.api.pmay.xml.DscEnrollmentRequest req = (com.aparsh.api.pmay.xml.DscEnrollmentRequest) un.unmarshal(sr);
 
-            // Build ack
             com.aparsh.api.pmay.xml.DscEnrollmentAck ack = new com.aparsh.api.pmay.xml.DscEnrollmentAck();
             ack.setStatus("SUCCESS");
             ack.setMessage("Received DSC enrollment for " + req.getApplicantName());
@@ -113,14 +128,14 @@ public class IntegrationServiceImpl implements IntegrationService {
             m.marshal(ack, sw);
             return sw.toString();
         } catch (Exception ex) {
-            ex.printStackTrace();
-            return "<error>Invalid XML</error>";
+            return "<error>Invalid DSC XML: " + ex.getMessage() + "</error>";
         }
     }
 
     @Override
     public String processFtoXml(String xml) {
         try {
+            // Flexible unmarshalling to handle both <FTO> and <FtoRequest>
             JAXBContext ctx = JAXBContext.newInstance(com.aparsh.api.pmay.xml.FtoRequest.class);
             Unmarshaller un = ctx.createUnmarshaller();
             StringReader sr = new StringReader(xml);
@@ -128,7 +143,7 @@ public class IntegrationServiceImpl implements IntegrationService {
 
             com.aparsh.api.pmay.xml.FtoAck ack = new com.aparsh.api.pmay.xml.FtoAck();
             ack.setStatus("SUCCESS");
-            ack.setMessage("FTO Received: " + req.getFtoNumber());
+            ack.setMessage("FTO Received Successfully: " + req.getFtoNumber());
 
             JAXBContext outCtx = JAXBContext.newInstance(com.aparsh.api.pmay.xml.FtoAck.class);
             Marshaller m = outCtx.createMarshaller();
@@ -137,8 +152,7 @@ public class IntegrationServiceImpl implements IntegrationService {
             m.marshal(ack, sw);
             return sw.toString();
         } catch (Exception ex) {
-            ex.printStackTrace();
-            return "<error>Invalid FTO XML</error>";
+            return "<error>FTO XML Validation Failed: " + ex.getMessage() + "</error>";
         }
     }
 }

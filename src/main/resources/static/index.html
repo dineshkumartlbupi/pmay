@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PMAY | Integration Hub</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-glow: rgba(99, 102, 241, 0.4);
+            --bg-dark: #0f172a;
+            --sidebar-bg: rgba(255, 255, 255, 0.03);
+            --glass-bg: rgba(255, 255, 255, 0.05);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --success: #22c55e;
+            --error: #ef4444;
+            --border: rgba(255, 255, 255, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        body {
+            background: var(--bg-dark);
+            color: var(--text-main);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+        }
+
+        /* Sidebar Decor */
+        .sidebar {
+            width: 320px;
+            background: var(--sidebar-bg);
+            border-right: 1px solid var(--border);
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            backdrop-filter: blur(10px);
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #fff, #6366f1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 1rem;
+        }
+
+        .endpoint-list {
+            list-style: none;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .endpoint-item {
+            padding: 0.75rem 1rem;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+            border: 1px solid transparent;
+        }
+
+        .endpoint-item:hover {
+            color: #fff;
+            background: var(--glass-bg);
+            transform: translateX(5px);
+        }
+
+        .endpoint-item.active {
+            background: var(--primary);
+            color: #fff;
+            box-shadow: 0 0 20px var(--primary-glow);
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            padding: 3rem;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .header {
+            margin-bottom: 2rem;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            color: var(--text-muted);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+
+        .card {
+            background: var(--glass-bg);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            padding: 2rem;
+            backdrop-filter: blur(20px);
+        }
+
+        .card-title {
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .btn-send {
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            padding: 0.75rem 2rem;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-send:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 25px var(--primary-glow);
+        }
+
+        textarea {
+            width: 100%;
+            height: 350px;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            color: #fff;
+            padding: 1rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            resize: none;
+            outline: none;
+        }
+
+        .response-box {
+            background: #000;
+            border-radius: 12px;
+            height: 350px;
+            padding: 1rem;
+            overflow: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            border: 1px solid var(--border);
+        }
+
+        .status-badge {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            display: none;
+        }
+
+        /* Loading Animation */
+        .loader {
+            display: none;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="sidebar">
+    <div class="logo">PMAY Integration Hub</div>
+    <div class="endpoint-list" id="endpointList">
+        <!-- Will be populated by JS -->
+    </div>
+</div>
+
+<main class="main-content">
+    <div class="header">
+        <h1 id="activeTitle">Select an API</h1>
+        <p id="activeUrl">Choose an endpoint from the left to begin testing.</p>
+    </div>
+
+    <div class="grid">
+        <div class="card">
+            <div class="card-title">
+                <span>Request Builder</span>
+                <button class="btn-send" onclick="sendRequest()">
+                    <span id="btnText">EXECUTE</span>
+                    <div class="loader" id="loader"></div>
+                </button>
+            </div>
+            <textarea id="requestBody" spellcheck="false"></textarea>
+        </div>
+
+        <div class="card">
+            <div class="card-title">
+                <span>Server Response</span>
+                <span id="statusBadge" class="status-badge"></span>
+            </div>
+            <pre class="response-box" id="responseBox">// Results will appear here...</pre>
+        </div>
+    </div>
+</main>
+
+<script>
+    const endpoints = [
+        { id: 'getState', name: 'Get State', url: '/api/v1/getState', type: 'JSON', default: { slsCode: 'UP' } },
+        { id: 'getSNADetails', name: 'SNA Details', url: '/api/v1/getSNADetails', type: 'JSON', default: { slsCode: 'UP', finYear: '2023-24' } },
+        { id: 'AgencyMapping', name: 'Agency Mapping', url: '/api/v1/AgencyMappingDetails', type: 'JSON', default: { slsCode: 'UP' } },
+        { id: 'Deduction', name: 'Get Deduction', url: '/api/v1/getDeduction', type: 'JSON', default: { slsCode: 'UP' } },
+        { id: 'Components', name: 'Get Components', url: '/api/v1/getComponents', type: 'JSON', default: { slsCode: 'UP' } },
+        { id: 'DDOAllotment', name: 'DDO Allotment', url: '/api/v1/ddoAllotmentDetails', type: 'JSON', default: { slsCode: 'UP' } },
+        { id: 'MotherSanction', name: 'Mother Sanction', url: '/api/v1/motherSanctionLimit', type: 'JSON', default: { slsCode: 'UP' } },
+        { id: 'ErrorMaster', name: 'Error Master', url: '/api/v1/getErrorMaster', type: 'JSON', default: { errorCode: 'E001' } },
+        { id: 'FTO', name: 'FTO Submit (XML)', url: '/api/v1/ftoSubmit', type: 'XML', default: '<?xml version="1.0" encoding="UTF-8"?>\n<FTO>\n  <Header>Sample</Header>\n</FTO>' },
+        { id: 'DSC', name: 'DSC Enrollment (XML)', url: '/api/v1/dscEnrollment', type: 'XML', default: '<?xml version="1.0" encoding="UTF-8"?>\n<DSC>\n  <Header>Enroll</Header>\n</DSC>' }
+    ];
+
+    let currentEndpoint = null;
+
+    function init() {
+        const list = document.getElementById('endpointList');
+        endpoints.forEach((ep, index) => {
+            const div = document.createElement('div');
+            div.className = 'endpoint-item';
+            div.innerText = ep.name;
+            div.onclick = () => selectEndpoint(ep, div);
+            list.appendChild(div);
+            if(index === 0) selectEndpoint(ep, div);
+        });
+    }
+
+    function selectEndpoint(ep, el) {
+        document.querySelectorAll('.endpoint-item').forEach(i => i.classList.remove('active'));
+        el.classList.add('active');
+        currentEndpoint = ep;
+        
+        document.getElementById('activeTitle').innerText = ep.name;
+        document.getElementById('activeUrl').innerText = `POST ${ep.url}`;
+        document.getElementById('requestBody').value = ep.type === 'JSON' ? JSON.stringify(ep.default, null, 2) : ep.default;
+        document.getElementById('responseBox').innerText = "// Ready for execution...";
+        document.getElementById('statusBadge').style.display = 'none';
+    }
+
+    async function sendRequest() {
+        const body = document.getElementById('requestBody').value;
+        const box = document.getElementById('responseBox');
+        const badge = document.getElementById('statusBadge');
+        const loader = document.getElementById('loader');
+        const btnText = document.getElementById('btnText');
+
+        loader.style.display = 'block';
+        btnText.style.display = 'none';
+
+        try {
+            const response = await fetch(currentEndpoint.url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': currentEndpoint.type === 'JSON' ? 'application/json' : 'application/xml',
+                    'Authorization': 'Basic ' + btoa('ifmisuser:ifmispassword')
+                },
+                body: body
+            });
+
+            badge.style.display = 'inline-block';
+            badge.innerText = `Status: ${response.status}`;
+            badge.style.background = response.ok ? 'var(--success)' : 'var(--error)';
+
+            const text = await response.text();
+            try {
+                // If it's JSON, pretty print it
+                box.innerText = JSON.stringify(JSON.parse(text), null, 2);
+            } catch {
+                // If it's XML or text, just show it
+                box.innerText = text;
+            }
+        } catch (err) {
+            box.innerText = `Network Error: ${err.message}`;
+            badge.style.display = 'inline-block';
+            badge.innerText = 'FAILED';
+            badge.style.background = 'var(--error)';
+        } finally {
+            loader.style.display = 'none';
+            btnText.style.display = 'inline-block';
+        }
+    }
+
+    init();
+</script>
+
+</body>
+</html>

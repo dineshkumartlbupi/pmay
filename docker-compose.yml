@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  # Oracle Database 23c Free Instance (Slim for local dev)
+  oracle-db:
+    image: gvenzl/oracle-free:slim
+    container_name: pmay-oracle
+    ports:
+      - "1521:1521"
+    environment:
+      - ORACLE_PASSWORD=pmay_password
+      - APP_USER=pmay_user
+      - APP_USER_PASSWORD=pmay_password
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "cat <<EOF | sqlplus -S / as sysdba\nexit\nEOF"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  # SFTP Server for testing Spring Integration
+  sftp-server:
+    image: atmoz/sftp
+    container_name: pmay-sftp
+    ports:
+      - "2222:22"
+    volumes:
+      - ./sftp_data:/home/ifmisuser/upload
+    # Create user: ifmisuser, password: ifmispassword, uid: 1001, gid: 1001, initial dir: /incoming
+    command: ifmisuser:ifmispassword:1001:1001:incoming,outgoing
+    restart: always
+
+# Optional: To persist DB data, uncomment the following:
+#    volumes:
+#      - oracle_data:/opt/oracle/oradata
+#volumes:
+#  oracle_data:

@@ -12,6 +12,7 @@ public interface IntegrationService {
     DdoAllotmentResponse getDdoAllotmentDetails(DdoAllotmentRequest req);
     MotherSanctionResponse getMotherSanctionLimit(MotherSanctionRequest req);
     ErrorMasterResponse getErrorMaster(ErrorMasterRequest req);
+    StateResponse getAllStates(); // Added for dynamic portal lookup
 
     String processDscEnrollmentXml(String xml);
     String processFtoXml(String xml);

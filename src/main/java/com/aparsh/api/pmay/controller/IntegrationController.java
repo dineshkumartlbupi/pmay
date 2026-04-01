@@ -22,6 +22,11 @@ public class IntegrationController {
         return ResponseEntity.ok(service.getState(req));
     }
 
+    @PostMapping(value = "/allStates", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<StateResponse> getAllStates() {
+        return ResponseEntity.ok(service.getAllStates());
+    }
+
     @PostMapping(value = "/getSNADetails", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<SnaDetailsResponse> getSNADetails(@RequestBody SnaDetailsRequest req) {
         return ResponseEntity.ok(service.getSnaDetails(req));
